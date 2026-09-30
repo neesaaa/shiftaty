@@ -1,0 +1,71 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: shiftaty-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-shiftaty}
+      POSTGRES_USER: ${POSTGRES_USER:-shiftaty}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-shiftaty}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-shiftaty}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: shiftaty-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  backend:
+    build:
+      context: ./backend/Shiftaty.Api
+      dockerfile: Dockerfile
+    container_name: shiftaty-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ConnectionStrings__Default: "Host=postgres;Port=5432;Database=${POSTGRES_DB:-shiftaty};Username=${POSTGRES_USER:-shiftaty};Password=${POSTGRES_PASSWORD:-shiftaty}"
+      Jwt__Secret: ${JWT_SECRET:-CHANGE_ME_super_secret_key_at_least_32_chars_long_please_1234567890}
+      Jwt__Issuer: ${JWT_ISSUER:-Shiftaty}
+      Jwt__Audience: ${JWT_AUDIENCE:-ShiftatyUsers}
+      Otp__DevMode: ${OTP_DEV_MODE:-true}
+      Smtp__Enabled: ${SMTP_ENABLED:-false}
+      Smtp__Host: ${SMTP_HOST:-}
+      Smtp__Port: ${SMTP_PORT:-587}
+      Smtp__Username: ${SMTP_USERNAME:-}
+      Smtp__Password: ${SMTP_PASSWORD:-}
+      Smtp__FromEmail: ${SMTP_FROM_EMAIL:-no-reply@shiftaty.local}
+      Smtp__FromName: ${SMTP_FROM_NAME:-Shiftaty}
+      AdminSeed__Email: ${ADMIN_EMAIL:-nassar@gmail.com}
+      AdminSeed__Password: ${ADMIN_PASSWORD:-Admin@123456}
+      Coins__TrialInitialCoins: ${TRIAL_COINS:-100}
+      Cors__Origins__0: "http://localhost:8081"
+      Cors__Origins__1: "http://localhost:5173"
+      Cors__Origins__2: "http://localhost:3000"
+    ports:
+      - "8081:8080"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: shiftaty-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+
+volumes:
+  pgdata:

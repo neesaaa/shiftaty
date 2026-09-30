@@ -1,0 +1,26 @@
+# Environment
+.env
+.env.local
+*.env
+
+# .NET
+bin/
+obj/
+*.user
+
+# Node
+node_modules/
+dist/
+npm-debug.log*
+
+# IDE
+.vs/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Logs
+logs/
+*.log
